@@ -7,6 +7,7 @@ import type {
   AuthResponse,
   LoginAuthResponse,
   LoginRequest,
+  RegisterVerificationResponse,
   RegisterRequest,
   User,
   ForgotPasswordRequest,
@@ -21,13 +22,23 @@ export interface RefreshTokenResponse {
 
 export const authAPI = {
   // Register new user
-  register: async (data: RegisterRequest): Promise<AuthResponse> => {
-    return apiClient.post<AuthResponse>('/auth/register', data);
+  register: async (data: RegisterRequest): Promise<RegisterVerificationResponse> => {
+    return apiClient.post<RegisterVerificationResponse>('/auth/register', data);
   },
 
   // Login
   login: async (data: LoginRequest): Promise<AuthResponse> => {
-    const response = await apiClient.post<LoginAuthResponse>('/auth/login', data);
+    const normalizedPayload: LoginRequest = {
+      ...data,
+      email: data.email.trim().toLowerCase(),
+    };
+
+    const response = await apiClient.post<LoginAuthResponse>('/auth/login', normalizedPayload);
+
+    if (!('tokens' in response)) {
+      throw new Error('Invalid login response');
+    }
+
     // Normalize nested tokens to flat format
     return {
       user: response.user,
@@ -79,7 +90,7 @@ export const authAPI = {
   },
 
   // Google OAuth callback
-  googleCallback: async (data: { code: string }): Promise<AuthResponse> => {
+  googleCallback: async (data: { code: string; desired_role?: 'APPRENTICE' | 'PROFESSIONAL' }): Promise<AuthResponse> => {
     return apiClient.post<AuthResponse>('/auth/google/callback', data);
   },
 };

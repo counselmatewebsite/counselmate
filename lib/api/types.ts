@@ -85,6 +85,13 @@ export interface LoginRequest {
   password: string;
 }
 
+export interface RegisterVerificationResponse {
+  message: string;
+  user: User;
+  verification_required: true;
+  email: string;
+}
+
 export interface RegisterRequest {
   email: string;
   password: string;

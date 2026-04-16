@@ -14,30 +14,29 @@ export default function VerifyEmailPage() {
 
   useEffect(() => {
     const token = searchParams.get('token')
-    if (!token) {
-      setStatus('error')
-      setMessage('Invalid verification link')
-      return
-    }
+  if (!token) {
+    setStatus('error')
+    setMessage('Invalid verification link')
+    return
+  }
 
-    verifyEmail(token)
+  verifyEmail(token)
   }, [searchParams])
 
   const verifyEmail = async (token: string) => {
     try {
       const response = await authAPI.verifyEmail({ token })
-      
-      // Store tokens from response
+
       if (response.access_token) {
-        apiClient.setToken(response.access_token)
-      }
-      if (response.refresh_token && typeof window !== 'undefined') {
-        localStorage.setItem('refresh_token', response.refresh_token)
-      }
-      
-      setStatus('success')
-      setMessage('Email verified successfully! Redirecting to dashboard...')
-      setTimeout(() => router.push('/dashboard'), 2000)
+      apiClient.setToken(response.access_token)
+    }
+    if (response.refresh_token && typeof window !== 'undefined') {
+      localStorage.setItem('refresh_token', response.refresh_token)
+    }
+
+    setStatus('success')
+    setMessage('Email verified successfully! Redirecting to dashboard...')
+    setTimeout(() => router.push('/dashboard'), 2000)
     } catch (error) {
       setStatus('error')
       setMessage('Invalid or expired verification link')

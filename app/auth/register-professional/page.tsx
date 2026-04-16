@@ -52,17 +52,12 @@ export default function RegisterProfessionalPage() {
     {
       id: 'LAWYER',
       title: 'Lawyer',
-      description: 'Coming soon — We are activating the legal services network.',
+      description: 'Legal practitioners handling contracts, litigation support, documentation, and advisory.',
       icon: '⚖️',
-      disabled: true,
     },
   ];
 
   const handleSelectProfession = (profType: string) => {
-    if (profType === 'LAWYER') {
-      toast.info('Lawyer registration coming soon!');
-      return;
-    }
     setProfession(profType);
     setFormData({ ...formData, profession_type: profType as any });
     setStep('details');
@@ -106,6 +101,12 @@ export default function RegisterProfessionalPage() {
       return false;
     }
 
+    const passwordRule = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/;
+    if (!passwordRule.test(formData.password)) {
+      setError('Password must include uppercase, lowercase, number, and special character');
+      return false;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return false;
@@ -126,10 +127,16 @@ export default function RegisterProfessionalPage() {
 
     try {
       const { confirmPassword, ...registerData } = formData;
-      await register({
+      const registerResult = await register({
         ...registerData,
         role: 'PROFESSIONAL',
       });
+
+      if (registerResult.verificationRequired) {
+        toast.success('Account created! Check your email to verify your account, then login to continue.');
+        router.push('/auth/login');
+        return;
+      }
 
       toast.success('Account created! Proceeding to payment...');
       // Move to payment step instead of redirecting immediately
@@ -270,13 +277,10 @@ export default function RegisterProfessionalPage() {
                   <button
                     key={prof.id}
                     onClick={() => handleSelectProfession(prof.id)}
-                    disabled={prof.disabled}
                     className={`relative p-6 rounded-lg border-2 transition-all text-left ${
                       profession === prof.id
                         ? 'border-blue-500 bg-blue-50'
-                        : prof.disabled
-                          ? 'border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed'
-                          : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50'
+                        : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50'
                     }`}
                   >
                     <div className="flex items-start justify-between">
@@ -289,14 +293,7 @@ export default function RegisterProfessionalPage() {
                         </div>
                         <p className="text-slate-600">{prof.description}</p>
                       </div>
-                      {!prof.disabled && (
-                        <ChevronRight className="w-6 h-6 text-blue-500 flex-shrink-0 ml-4" />
-                      )}
-                      {prof.disabled && (
-                        <span className="text-xs font-semibold text-slate-500 uppercase">
-                          Coming Soon
-                        </span>
-                      )}
+                      <ChevronRight className="w-6 h-6 text-blue-500 flex-shrink-0 ml-4" />
                     </div>
                   </button>
                 ))}
@@ -329,7 +326,7 @@ export default function RegisterProfessionalPage() {
                 Create Your Account
               </h1>
               <p className="text-lg text-slate-600 mb-8">
-                Register as a {formData.profession_type === 'CA' ? 'Chartered Accountant' : 'Consultant'}
+                Register as a {formData.profession_type === 'CA' ? 'Chartered Accountant' : formData.profession_type === 'LAWYER' ? 'Lawyer' : 'Consultant'}
               </p>
 
               <form onSubmit={handleSubmit} className="space-y-6">

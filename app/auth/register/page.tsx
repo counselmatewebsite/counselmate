@@ -66,6 +66,12 @@ export default function RegisterPage() {
       return false;
     }
 
+    const passwordRule = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/;
+    if (!passwordRule.test(formData.password)) {
+      setError('Password must include uppercase, lowercase, number, and special character');
+      return false;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return false;
@@ -86,12 +92,18 @@ export default function RegisterPage() {
 
     try {
       const { confirmPassword, ...registerData } = formData;
-      await register({
+      const registerResult = await register({
         ...registerData,
         role: 'APPRENTICE',
       });
 
-      toast.success('Account created! A verification email has been sent.');
+      if (registerResult.verificationRequired) {
+        toast.success('Account created! Check your email to verify your account.');
+        router.push('/auth/login');
+        return;
+      }
+
+      toast.success('Account created!');
 
       setTimeout(() => {
         router.push('/dashboard');

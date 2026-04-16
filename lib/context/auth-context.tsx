@@ -6,13 +6,13 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authAPI, apiClient } from '@/lib/api';
-import type { User, LoginRequest, RegisterRequest } from '@/lib/api/types';
+import type { User, LoginRequest, RegisterRequest, RegisterVerificationResponse } from '@/lib/api/types';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (credentials: LoginRequest) => Promise<void>;
-  register: (data: RegisterRequest) => Promise<void>;
+  register: (data: RegisterRequest) => Promise<{ verificationRequired: boolean; email?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   setUser: (user: User | null) => void;
@@ -145,6 +145,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (credentials: LoginRequest) => {
     const response = await authAPI.login(credentials);
+
+    if (!response.access_token || !response.refresh_token || !response.user) {
+      throw new Error('Invalid login response');
+    }
+
     apiClient.setToken(response.access_token);
     
     // Store refresh token
@@ -156,15 +161,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const register = async (data: RegisterRequest) => {
-    const response = await authAPI.register(data);
-    apiClient.setToken(response.access_token);
-    
-    // Store refresh token
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('refresh_token', response.refresh_token);
-    }
-    
-    setUser(response.user);
+	const response = await authAPI.register(data) as RegisterVerificationResponse;
+	return {
+		verificationRequired: !!response.verification_required,
+		email: response.email,
+	};
   };
 
   const logout = async () => {

@@ -177,7 +177,11 @@ class APIClient {
       }));
       
       // Create error with status code embedded
-      const errorMessage = error.message || `HTTP error! status: ${response.status}`;
+      const primaryMessage = error.message || error.error || `HTTP error! status: ${response.status}`;
+      const details = typeof error.details === 'string' && error.details.trim().length > 0
+        ? ` (${error.details})`
+        : '';
+      const errorMessage = `${primaryMessage}${details}`;
   const customError = new Error(errorMessage) as Error & { status?: number };
       customError.status = response.status;
       customError.message = `[${response.status}] ${errorMessage}`;

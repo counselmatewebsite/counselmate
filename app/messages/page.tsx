@@ -8,7 +8,7 @@ import { realtimeAPI, type FeeRequest, type HandshakeAgreement, type WSStoredMes
 import type { Booking } from "@/lib/api/bookings"
 import type { ProfileContactMessage } from "@/lib/api/profiles"
 import type { User } from "@/lib/api/types"
-import { Send, Phone, Video, Mic, MicOff, VideoOff, MessageSquare, IndianRupee, Check, X, Loader2 } from "lucide-react"
+import { Send, Phone, Mic, MicOff, MessageSquare, IndianRupee, Check, X, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
 type WSMessageType =
@@ -105,13 +105,10 @@ export default function MessagesPage() {
   const [chatPaneInCall, setChatPaneInCall] = useState(true)
   const [, setInCall] = useState(false)
   const [muted, setMuted] = useState(false)
-  const [cameraOff, setCameraOff] = useState(false)
 
   const wsRef = useRef<WebSocket | null>(null)
   const pcRef = useRef<RTCPeerConnection | null>(null)
   const localStreamRef = useRef<MediaStream | null>(null)
-  const localVideoRef = useRef<HTMLVideoElement>(null)
-  const remoteVideoRef = useRef<HTMLVideoElement>(null)
   const chatBottomRef = useRef<HTMLDivElement>(null)
 
   const isProfessional = (user?.role || "").toString().toUpperCase() === "PROFESSIONAL"
@@ -409,7 +406,7 @@ export default function MessagesPage() {
 
       if (msg.type === "call_offer" && msg.sdp_offer) {
         setCallOpen(true)
-        await ensureMedia(true)
+        await ensureMedia()
         const pc = ensurePeerConnection()
         await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(msg.sdp_offer)))
         const answer = await pc.createAnswer()
@@ -447,9 +444,7 @@ export default function MessagesPage() {
   const ensurePeerConnection = () => {
     if (pcRef.current) return pcRef.current
     const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] })
-    pc.ontrack = (event) => {
-      if (remoteVideoRef.current) remoteVideoRef.current.srcObject = event.streams[0]
-    }
+    pc.ontrack = () => {}
     pc.onicecandidate = (event) => {
       if (!event.candidate || !selected) return
       sendWS({
@@ -463,16 +458,15 @@ export default function MessagesPage() {
     return pc
   }
 
-  const ensureMedia = async (video: boolean) => {
+  const ensureMedia = async () => {
     if (localStreamRef.current) return
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video })
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false })
     localStreamRef.current = stream
-    if (localVideoRef.current) localVideoRef.current.srcObject = stream
     const pc = ensurePeerConnection()
     stream.getTracks().forEach((track) => pc.addTrack(track, stream))
   }
 
-  const startCall = async (video: boolean) => {
+  const startCall = async () => {
     if (!selected) return
     if (handshake?.status !== "ACTIVE") {
       setTermsOpen(true)
@@ -480,7 +474,7 @@ export default function MessagesPage() {
     }
     try {
       setCallOpen(true)
-      await ensureMedia(video)
+      await ensureMedia()
       const pc = ensurePeerConnection()
       const offer = await pc.createOffer()
       await pc.setLocalDescription(offer)
@@ -798,8 +792,7 @@ export default function MessagesPage() {
                   <div className="text-xs text-slate-500">Booking #{selected.id.slice(0, 8)}</div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={() => startCall(false)} className="rounded-md border p-2 hover:bg-slate-50" disabled={handshake?.status !== "ACTIVE"}><Phone className="h-4 w-4" /></button>
-                  <button onClick={() => startCall(true)} className="rounded-md border p-2 hover:bg-slate-50" disabled={handshake?.status !== "ACTIVE"}><Video className="h-4 w-4" /></button>
+                  <button onClick={() => startCall()} className="rounded-md border p-2 hover:bg-slate-50" disabled={handshake?.status !== "ACTIVE"}><Phone className="h-4 w-4" /></button>
                   {isProfessional && (
                     <button onClick={() => setFeeModalOpen(true)} className="rounded-md border px-3 py-2 text-sm hover:bg-slate-50">Request Payment</button>
                   )}
@@ -902,7 +895,7 @@ export default function MessagesPage() {
           <div className="w-full max-w-xl rounded-xl bg-white p-5">
             <h3 className="text-lg font-semibold">Terms & Conditions for Messaging / Calls</h3>
             <div className="mt-3 max-h-60 overflow-auto rounded-md border bg-slate-50 p-3 text-sm text-slate-700">
-              <p>1. Both parties must agree before any messaging, voice, or video communication.</p>
+              <p>1. Both parties must agree before any messaging or voice communication.</p>
               <p className="mt-2">2. Communication is for legal/professional consultation purposes only.</p>
               <p className="mt-2">3. Payment terms and platform fees are displayed before payment.</p>
               <p className="mt-2">4. Abuse, harassment, and non-compliant behavior may lead to account action.</p>
@@ -939,10 +932,11 @@ export default function MessagesPage() {
       {callOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
           <div className="grid h-[84vh] w-full max-w-6xl grid-cols-1 gap-4 rounded-xl bg-slate-900 p-4 text-white lg:grid-cols-[1fr_360px]">
-            <div className="relative rounded-lg bg-black">
-              <video ref={remoteVideoRef} autoPlay playsInline className="h-full w-full rounded-lg object-cover" />
-              <div className="absolute bottom-4 right-4 h-36 w-56 overflow-hidden rounded-md border border-white/20 bg-black">
-                <video ref={localVideoRef} autoPlay muted playsInline className="h-full w-full object-cover" />
+            <div className="relative flex items-center justify-center rounded-lg bg-black">
+              <div className="flex flex-col items-center gap-2 rounded-xl border border-white/20 bg-slate-900/60 px-8 py-10">
+                <Phone className="h-10 w-10 text-emerald-400" />
+                <div className="text-lg font-semibold">Audio call in progress</div>
+                <div className="text-sm text-slate-300">Your microphone is connected via secure realtime channel.</div>
               </div>
               <div className="absolute left-1/2 bottom-4 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/60 px-3 py-2">
                 <button
@@ -955,17 +949,6 @@ export default function MessagesPage() {
                   className={`rounded-full p-3 ${muted ? "bg-red-600" : "bg-slate-700"}`}
                 >
                   {muted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                </button>
-                <button
-                  onClick={() => {
-                    const t = localStreamRef.current?.getVideoTracks()[0]
-                    if (!t) return
-                    t.enabled = !t.enabled
-                    setCameraOff(!t.enabled)
-                  }}
-                  className={`rounded-full p-3 ${cameraOff ? "bg-red-600" : "bg-slate-700"}`}
-                >
-                  {cameraOff ? <VideoOff className="h-4 w-4" /> : <Video className="h-4 w-4" />}
                 </button>
                 <button onClick={() => setChatPaneInCall((v) => !v)} className="rounded-full bg-slate-700 p-3"><MessageSquare className="h-4 w-4" /></button>
                 <button

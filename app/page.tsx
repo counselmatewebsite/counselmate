@@ -207,7 +207,7 @@ export default function Home() {
               },
               {
                 n: t("steps.4.badge", "Step Five"),  title: t("steps.4.title", "Consult Securely"),
-                body: t("steps.4.body", "Connect via our encrypted in-app messaging or video consultation. All communications are private, confidential, and protected. Attorney-client privilege is respected by design."),
+                body: t("steps.4.body", "Connect via our encrypted in-app messaging or audio consultation. All communications are private, confidential, and protected. Attorney-client privilege is respected by design."),
                 note: t("steps.4.note", "Your data is never shared or sold."),
               },
             ].map((step, i) => (
